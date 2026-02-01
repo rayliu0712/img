@@ -6,16 +6,19 @@
     { type: "image/png", ext: "png" },
     { type: "image/webp", ext: "webp" },
   ];
-  let quality = $state(100);
-  let outputType = $state("image/jpeg");
 
-  const images = $state<{ imgUrl: string; file: File }[]>([]);
+  const images = $state<{ imageUrl: string; file: File }[]>([]);
+  let outputType = $state("image/jpeg");
+  let quality = $state(100);
+
+  let dialog: HTMLDialogElement;
+  let viewIndex = $state<number | null>(null);
 
   function addNewImages(fileList: FileList) {
     const newImages = Array.from(fileList)
       .filter((file) => file.type.startsWith("image/"))
       .map((file) => ({
-        imgUrl: URL.createObjectURL(file),
+        imageUrl: URL.createObjectURL(file),
         file: file,
       }));
 
@@ -45,7 +48,7 @@
   }
 
   function removeImage(i: number) {
-    const url = images[i].imgUrl;
+    const url = images[i].imageUrl;
     URL.revokeObjectURL(url);
     images.splice(i, 1);
   }
@@ -72,6 +75,7 @@
 
   async function convertImageFile(
     file: File,
+    i: number,
   ): Promise<{ blob: Blob; filename: string }> {
     const bitmap = await createImageBitmap(file);
     const { width, height } = bitmap;
@@ -97,8 +101,7 @@
             ext = "jpg";
           }
 
-          // TODO: 避免重複檔名
-          filename = `${filename}.${ext}`;
+          filename = `${filename}_${i + 1}.${ext}`;
 
           resolve({ blob: blob!, filename: filename });
         },
@@ -113,8 +116,8 @@
 
     if (count <= 4) {
       await Promise.all(
-        images.map(async ({ file }) => {
-          const { blob, filename } = await convertImageFile(file);
+        images.map(async ({ file }, i) => {
+          const { blob, filename } = await convertImageFile(file, i);
           download(blob, filename);
         }),
       );
@@ -125,13 +128,22 @@
     // images > 4
     const zip = JSZip();
     await Promise.all(
-      images.map(async ({ file }) => {
-        const { blob, filename } = await convertImageFile(file);
+      images.map(async ({ file }, i) => {
+        const { blob, filename } = await convertImageFile(file, i);
         zip.file(filename, blob);
       }),
     );
     const blob = await zip.generateAsync({ type: "blob" });
     download(blob, `converted_${count}_images.zip`);
+  }
+
+  async function viewImage(i: number) {
+    viewIndex = i;
+    dialog.showModal();
+    await new Promise<void>((resolve) => {
+      dialog.onclose = () => resolve();
+    });
+    viewIndex = null;
   }
 </script>
 
@@ -153,9 +165,9 @@
       +
     </button>
 
-    {#each images as { imgUrl: url }, i}
+    {#each images as { imageUrl }, i}
       <div class="w-full aspect-square relative group">
-        <img alt="thumbnail" src={url} class="size-full object-cover" />
+        <img alt="thumbnail" src={imageUrl} class="size-full object-cover" />
 
         <div
           class="absolute inset-0 duration-300 bg-black opacity-0 group-hover:opacity-70 flex items-center justify-center"
@@ -164,7 +176,9 @@
             class="absolute top-1 right-1 cursor-pointer"
             onclick={() => removeImage(i)}>✕</button
           >
-          <button onclick={() => {}} class="cursor-pointer">View</button>
+          <button onclick={() => viewImage(i)} class="cursor-pointer"
+            >View</button
+          >
         </div>
       </div>
     {/each}
@@ -219,3 +233,36 @@
     >
   </div>
 </div>
+
+<dialog
+  bind:this={dialog}
+  class="max-h-none max-w-none size-full bg-transparent border-none backdrop:backdrop-blur-md backdrop:bg-black/70"
+>
+  {#if viewIndex !== null}
+    <div class="relative size-full flex">
+      <img
+        src={images[viewIndex].imageUrl}
+        alt="view"
+        class="size-full object-contain"
+      />
+      <button
+        class="absolute top-2 right-2 cursor-pointer text-white text-2xl"
+        onclick={() => dialog.close()}>✕</button
+      >
+
+      {#if viewIndex > 0}
+        <button
+          class="absolute left-2 cursor-pointer text-white text-3xl self-center"
+          onclick={() => viewIndex!--}>🡨</button
+        >
+      {/if}
+
+      {#if viewIndex < images.length - 1}
+        <button
+          class="absolute right-2 cursor-pointer text-white text-3xl self-center"
+          onclick={() => viewIndex!++}>🡪</button
+        >
+      {/if}
+    </div>
+  {/if}
+</dialog>
