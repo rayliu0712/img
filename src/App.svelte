@@ -1,20 +1,15 @@
 <script lang="ts">
   import JSZip from "jszip";
 
-  const FORMATS = new Map([
-    ["image/jpeg", "jpg"],
-    ["image/png", "png"],
-    ["image/webp", "webp"],
-  ]);
+  const FORMATS: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  };
 
-  const images = $state<
-    { url: string; blob: Blob; name: string; ext: string }[]
-  >([]);
+  const images = $state<{ url: string; blob: Blob; name: string }[]>([]);
   let outputType = $state("image/jpeg");
   let quality = $state(100);
-
-  let dialog: HTMLDialogElement;
-  let viewIndex = $state(-1);
 
   function addNewImages(fileList: FileList) {
     const newImages = Array.from(fileList)
@@ -23,13 +18,11 @@
         const filename = file.name;
         const i = filename.lastIndexOf(".");
         const name = i === -1 ? filename : filename.slice(0, i);
-        const ext = i === -1 ? "" : filename.slice(i + 1);
 
         return {
           url: URL.createObjectURL(file),
           blob: file,
           name: name,
-          ext: ext,
         };
       });
 
@@ -56,12 +49,6 @@
     if (fileList) {
       addNewImages(fileList);
     }
-  }
-
-  function removeImage(i: number) {
-    const url = images[i].url;
-    URL.revokeObjectURL(url);
-    images.splice(i, 1);
   }
 
   function onDrop(e: DragEvent) {
@@ -105,7 +92,7 @@
     return new Promise((resolve) =>
       canvas.toBlob(
         (blob) => {
-          const ext = FORMATS.get(blob!.type);
+          const ext = FORMATS[blob!.type];
           const filename = `${name}_${i + 1}.${ext}`;
 
           resolve({ converted: blob!, filename: filename });
@@ -139,16 +126,7 @@
       }),
     );
     const zipBlob = await zip.generateAsync({ type: "blob" });
-    download(zipBlob, `converted_${count}_images.zip`);
-  }
-
-  async function viewImage(i: number) {
-    viewIndex = i;
-    // dialog.showModal();
-    await new Promise<void>((resolve) => {
-      // dialog.onclose = () => resolve();
-    });
-    viewIndex = -1;
+    download(zipBlob, `${count}_imgs.zip`);
   }
 </script>
 
@@ -167,8 +145,12 @@
 
   {#if images.length === 0}
     <div class="flex-1 flex items-center justify-center">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="w-3/4 h-3/4 rounded-xl bg-neutral-700/50 flex justify-center items-center"
+        ondragover={(e) => e.preventDefault()}
+        ondrop={onDrop}
+        onpaste={onPaste}
       >
         <button
           class="bg-emerald-700 py-4 hover:bg-emerald-600 duration-150 rounded-xl cursor-pointer w-1/3"
@@ -180,13 +162,18 @@
     <div
       class="flex-1 self-center w-1/2 md:w-1/3 flex flex-col items-stretch justify-evenly"
     >
+      <p class="font-bold flex justify-center">
+        {images.length == 1 ? "1 Image" : `${images.length} Images`}
+      </p>
+
       <div class="flex flex-col gap-2">
         <p>Format</p>
         <div class="relative">
           <select
             class="appearance-none bg-neutral-700 text-white rounded-lg px-4 py-2 pr-8 w-full cursor-pointer"
+            bind:value={outputType}
           >
-            {#each FORMATS as [type, ext]}
+            {#each Object.entries(FORMATS) as [type, ext]}
               <option value={type}>{ext}</option>
             {/each}
           </select>
@@ -197,23 +184,18 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-2">
-        <p>Quality</p>
-        <input type="range" min="0" max="100" step="1" />
-      </div>
+      {#if outputType != "image/png"}
+        <div class="flex flex-col gap-2">
+          <p>Quality {quality}%</p>
 
-      <div class="flex flex-col gap-2">
-        <button
-          class="bg-emerald-700 py-4 cursor-pointer rounded-xl hover:bg-emerald-600 duration-150"
-          >Download All</button
-        >
+          <input type="range" min="0" max="100" step="1" bind:value={quality} />
+        </div>
+      {/if}
 
-        <button
-          class="bg-neutral-700 py-4 cursor-pointer rounded-xl hover:bg-neutral-600 duration-150"
-        >
-          Copy
-        </button>
-      </div>
+      <button
+        class="bg-emerald-700 py-4 cursor-pointer rounded-xl hover:bg-emerald-600 duration-150"
+        onclick={clickDownloadButton}>Download All</button
+      >
     </div>
   {/if}
 </div>
