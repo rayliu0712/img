@@ -144,133 +144,76 @@
 
   async function viewImage(i: number) {
     viewIndex = i;
-    dialog.showModal();
+    // dialog.showModal();
     await new Promise<void>((resolve) => {
-      dialog.onclose = () => resolve();
+      // dialog.onclose = () => resolve();
     });
     viewIndex = -1;
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  class="h-screen flex flex-row p-1"
-  onpaste={onPaste}
-  ondragover={(e) => e.preventDefault()}
-  ondrop={onDrop}
->
-  <!-- thumbnails -->
-  <div
-    class="flex-3 grid grid-cols-5 gap-1 content-start overflow-y-scroll pr-1"
-  >
-    <button
-      class="w-full aspect-square bg-neutral-600 cursor-pointer text-5xl hover:bg-neutral-500 duration-150"
-      onclick={inputImages}
+<div class="flex flex-col h-screen">
+  <div class="flex flex-row bg-neutral-700 items-center">
+    <a
+      class="mx-4 my-2 p-2 cursor-pointer font-bold hover:bg-neutral-600 duration-150 rounded-lg"
+      href=".">「img」</a
     >
-      +
-    </button>
+    <a
+      class="text-neutral-300 hover:underline"
+      href="https://github.com/rayliu0712/image_convertor"
+      >Canvas-Based Image Converter</a
+    >
+  </div>
 
-    {#each images as { url: imageUrl }, i}
-      <div class="w-full aspect-square relative group">
-        <img alt="thumbnail" src={imageUrl} class="size-full object-cover" />
-
-        <div
-          class="absolute inset-0 duration-300 bg-black opacity-0 group-hover:opacity-70 flex items-center justify-center"
+  {#if images.length === 0}
+    <div class="flex-1 flex items-center justify-center">
+      <div
+        class="w-3/4 h-3/4 rounded-xl bg-neutral-700/50 flex justify-center items-center"
+      >
+        <button
+          class="bg-emerald-700 py-4 hover:bg-emerald-600 duration-150 rounded-xl cursor-pointer w-1/3"
+          onclick={inputImages}>Add Images</button
         >
-          <button
-            class="absolute top-1 right-1 cursor-pointer"
-            onclick={() => removeImage(i)}>✕</button
+      </div>
+    </div>
+  {:else}
+    <div
+      class="flex-1 self-center w-1/2 md:w-1/3 flex flex-col items-stretch justify-evenly"
+    >
+      <div class="flex flex-col gap-2">
+        <p>Format</p>
+        <div class="relative">
+          <select
+            class="appearance-none bg-neutral-700 text-white rounded-lg px-4 py-2 pr-8 w-full cursor-pointer"
           >
-          <button onclick={() => viewImage(i)} class="cursor-pointer"
-            >View</button
+            {#each FORMATS as [type, ext]}
+              <option value={type}>{ext}</option>
+            {/each}
+          </select>
+          <span
+            class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white"
+            >▾</span
           >
         </div>
       </div>
-    {/each}
-  </div>
 
-  <!-- panel -->
-  <div class="flex-1 p-5 flex flex-col gap-10">
-    <button
-      class="font-bold cursor-pointer border-2 border-solid py-2 hover:bg-neutral-600 duration-150"
-      onclick={() => location.reload()}>Image Convertor</button
-    >
-
-    <div class="flex flex-col gap-2">
-      <p>Output Format</p>
-      <select
-        class="bg-neutral-600 rounded-lg cursor-pointer px-4 py-2"
-        bind:value={outputType}
-      >
-        {#each FORMATS as [type, ext]}
-          <option value={type}>{ext}</option>
-        {/each}
-      </select>
-    </div>
-
-    {#if outputType !== "image/png"}
       <div class="flex flex-col gap-2">
-        <p>Quality {quality}%</p>
-
-        <input
-          type="range"
-          min="0"
-          step="1"
-          max="100"
-          class="accent-cyan-600 cursor-pointer"
-          bind:value={quality}
-        />
+        <p>Quality</p>
+        <input type="range" min="0" max="100" step="1" />
       </div>
-    {/if}
 
-    <button
-      onclick={clickDownloadButton}
-      class="self-end rounded-full duration-150 bg-cyan-700 cursor-pointer hover:bg-cyan-600 px-8 py-2"
-      >Download All</button
-    >
-
-    <div class="flex-1"></div>
-
-    <a
-      class="self-end cursor-pointer text-3xl hover:animate-spin"
-      href="https://github.com/rayliu0712/image_convertor"
-      target="_blank">🍹</a
-    >
-  </div>
-</div>
-
-<dialog
-  bind:this={dialog}
-  class="max-h-none max-w-none size-full bg-transparent border-none backdrop:backdrop-blur-md backdrop:bg-black/70"
->
-  {#if viewIndex !== -1}
-    {@const { url, name, ext } = images[viewIndex]}
-    <div class="size-full flex flex-col">
-      <div class="flex flex-row">
-        <p class="flex-1">{name} / {ext}</p>
+      <div class="flex flex-col gap-2">
         <button
-          class="cursor-pointer text-white text-2xl"
-          onclick={() => dialog.close()}>✕</button
+          class="bg-emerald-700 py-4 cursor-pointer rounded-xl hover:bg-emerald-600 duration-150"
+          >Download All</button
         >
-      </div>
 
-      <div class="flex-1 min-h-0 relative flex">
-        <img src={url} alt="view" class="size-full object-contain" />
-
-        {#if viewIndex > 0}
-          <button
-            class="absolute left-2 cursor-pointer text-white text-3xl self-center"
-            onclick={() => viewIndex--}>🡨</button
-          >
-        {/if}
-
-        {#if viewIndex < images.length - 1}
-          <button
-            class="absolute right-2 cursor-pointer text-white text-3xl self-center"
-            onclick={() => viewIndex++}>🡪</button
-          >
-        {/if}
+        <button
+          class="bg-neutral-700 py-4 cursor-pointer rounded-xl hover:bg-neutral-600 duration-150"
+        >
+          Copy
+        </button>
       </div>
     </div>
   {/if}
-</dialog>
+</div>
